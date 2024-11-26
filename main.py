@@ -12,6 +12,7 @@ ENEMY_SPEED = 3
 INITIAL_LIVES = 3
 player_speed = 4
 bullet_speed = 5
+killed_enemies = 0
 
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
@@ -105,6 +106,7 @@ def game_loop():
     timer = 40
     last_time = pygame.time.get_ticks()
     last_shot_time = 0
+    global killed_enemies
 
     while running:
         for event in pygame.event.get():
@@ -151,7 +153,7 @@ def game_loop():
             enemies.append(new_enemy)
             enemy_spawn_time = 0
 
-        # Обновление врагов и проверка коллизий
+        # ```Обновление врагов и проверка коллизий```
         for enemy in enemies[:]:
             enemy.move_towards_player(player_pos)
             if (player_pos[0] < enemy.pos[0] + enemy.size and
@@ -163,18 +165,20 @@ def game_loop():
                 if lives <= 0:
                     return "LOSE"
 
-        # Обновление пуль
+        # ```Обновление пуль```
         for bullet in bullets[:]:
             bullet.move()
-            if bullet.pos[0] < 0 or bullet.pos[0] > WIDTH or bullet.pos[1] < 0 or bullet.pos[1] > HEIGHT:  # Удаление пуль, которые вышли за пределы экрана
+            if bullet.pos[0] < 0 or bullet.pos[0] > WIDTH or bullet.pos[1] < 0 or bullet.pos[1] > HEIGHT:
+                # ```Удаление пуль, которые вышли за пределы экрана```
                 bullets.remove(bullet)
 
-        # Проверка коллизий между пулями и врагами
+        # ```Проверка коллизий между пулями и врагами```
         for bullet in bullets[:]:
             for enemy in enemies[:]:
                 if (enemy.pos[0] < bullet.pos[0] < enemy.pos[0] + enemy.size and enemy.pos[1] < bullet.pos[1] < enemy.pos[1] + enemy.size):
-                    bullets.remove(bullet)
                     enemies.remove(enemy)
+                    bullets.remove(bullet)
+                    killed_enemies += 1
                     break
 
         current_time = pygame.time.get_ticks()
@@ -191,14 +195,14 @@ def game_loop():
 
         for enemy in enemies:
             enemy.draw(screen)
-
         for bullet in bullets:
             bullet.draw(screen)
 
         draw_text(f'Жизни: {lives}', 36, BLACK, screen, WIDTH // 2, 30)
         draw_text(f'Осталось времени: {int(timer)}', 36, BLACK, screen, WIDTH // 2, 60)
-        pygame.display.flip()
+        draw_text(f'Убито врагов: {killed_enemies}', 36, BLACK, screen, WIDTH // 2, 90)
 
+        pygame.display.flip()
         clock.tick(120)
 
     return "QUIT"
@@ -214,24 +218,26 @@ def show_training():
             if event.type == pygame.QUIT:
                 running = False
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_SPACE:  # Проверка нажатия пробела
-                    return  # Выход из функции, чтобы начать игру
+                if event.key == pygame.K_SPACE:
+                    return False
 
         screen.fill(WHITE)
-        screen.blit(training[index], (0, 0))  # Отображаем текущее изображение
+        screen.blit(training[index], (0, 0))
+        draw_text('Двигаться', 65, BLACK, screen, WIDTH // 2 - 500, HEIGHT // 2 - 300)
+        draw_text('Атака', 65, BLACK, screen, WIDTH // 2 + 500, HEIGHT // 2 - 300)
+        draw_text('Для продолжения - нажмите пробел', 70, BLACK, screen, WIDTH // 2, HEIGHT // 2 + 450)
         pygame.display.flip()
 
         index += 1
         if index >= len(training):
-            index = 0  # Сбросить индекс для повторного показа
+            index = 0
 
-        clock.tick(1)  # Пауза между изображениями (1 секунда)
+        clock.tick(1)
 
-    pygame.time.delay(1000)  # Небольшая задержка перед началом игры
     return
 
 
-def menu(result, record_saved):
+def display_final(result, record_saved):
     running = True
     while running:
         screen.fill(WHITE)
@@ -241,6 +247,7 @@ def menu(result, record_saved):
         else:
             draw_text('Ты проиграл', 85, RED, screen, WIDTH // 2, HEIGHT // 2 - 200)
 
+        draw_text('Убито врагов: {}'.format(killed_enemies), 70, BLACK, screen, WIDTH // 2, HEIGHT // 2 )
         menu_text = draw_text1('В меню', 75, BLACK, screen, WIDTH // 2, HEIGHT // 2 + 100)
         exit_text = draw_text1('Выход', 75, RED, screen, WIDTH // 2, HEIGHT // 2 + 200)
 
@@ -297,7 +304,7 @@ def main():
         if game_result == "QUIT":
             break
 
-        continue_game, record_saved = menu(game_result, record_saved)
+        continue_game, record_saved = display_final(game_result, record_saved)
         if not continue_game:
             break
 
