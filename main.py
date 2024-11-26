@@ -24,7 +24,7 @@ PINK = (241, 156, 187)
 screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.FULLSCREEN)
 pygame.display.set_caption("Game")
 
-# ```Рекорд```
+# ```Для рекорда```
 # class Base(DeclarativeBase):
 #     pass
 #
@@ -153,7 +153,7 @@ def game_loop():
         if timer <= 0:
             return "WIN"
 
-        # Отрисовка
+        # Отрисовка игрока
         screen.fill(WHITE)
         pygame.draw.rect(screen, GREEN, (player_pos[0], player_pos[1], PLAYER_SIZE, PLAYER_SIZE))
 
@@ -175,6 +175,7 @@ def menu(result, record_saved):
         screen.fill(WHITE)
 
         if result == "WIN":
+            # ```Сохранение рекорда```
             # if not record_saved:
             #     save_record()
             #     record_saved = True
