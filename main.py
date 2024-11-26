@@ -1,9 +1,6 @@
 import pygame
 import random
 import math
-# from datetime import datetime
-# from sqlalchemy import create_engine, Column, DateTime, Integer
-# from sqlalchemy.orm import sessionmaker, DeclarativeBase
 
 pygame.init()
 
@@ -14,6 +11,7 @@ ENEMY_SIZE = 30
 ENEMY_SPEED = 3
 INITIAL_LIVES = 3
 player_speed = 4
+bullet_speed = 5
 
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
@@ -24,42 +22,24 @@ PINK = (241, 156, 187)
 screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.FULLSCREEN)
 pygame.display.set_caption("Game")
 
-# ```Рекорд```
-# class Base(DeclarativeBase):
-#     pass
-#
-# engine = create_engine("mysql+pymysql://root:1111@127.0.0.1/3ip")
-# engine.connect()
-# Session = sessionmaker(bind=engine)
-#
-# class Record(Base):
-#     __tablename__ = 'Record'
-#     id = Column(Integer, nullable=False, unique=True, primary_key=True, autoincrement=True)
-#     datetime = Column(DateTime)
-#
-# Base.metadata.create_all(engine)
-#
-# def save_record():
-#     session = Session()
-#     new_record = Record(datetime=datetime.now())
-#     session.add(new_record)
-#     session.commit()
-#     session.close()
+training = [pygame.image.load('img/training1.jpg'),
+            pygame.image.load('img/training2.jpg'),
+            pygame.image.load('img/training3.jpg'),
+            pygame.image.load('img/training2.jpg'),
+            pygame.image.load('img/training1.jpg')]
 
 
-def draw_text(text, size, color, surface, x, y):
-    font = pygame.font.Font(None, size)
-    text_surface = font.render(text, True, color)
-    text_rect = text_surface.get_rect(center=(x, y))
-    surface.blit(text_surface, text_rect)
+class Bullet:
+    def __init__(self, x, y, direction):
+        self.pos = [x, y]
+        self.direction = direction  # направление: (dx, dy)
 
+    def move(self):
+        self.pos[0] += self.direction[0] * bullet_speed
+        self.pos[1] += self.direction[1] * bullet_speed
 
-def draw_text1(text, size, color, surface, x, y):
-    font = pygame.font.Font(None, size)
-    text_surface = font.render(text, True, color)
-    text_rect = text_surface.get_rect(center=(x, y))
-    surface.blit(text_surface, text_rect)
-    return text_rect
+    def draw(self, surface):
+        pygame.draw.circle(surface, BLACK, (int(self.pos[0]), int(self.pos[1])), 10)
 
 
 class Enemy:
@@ -99,15 +79,32 @@ def spawn_enemy():
     return Enemy(x, y)
 
 
+def draw_text(text, size, color, surface, x, y, font_path='text/EpilepsySans.ttf'):
+    font = pygame.font.Font(font_path, size)
+    text_surface = font.render(text, True, color)
+    text_rect = text_surface.get_rect(center=(x, y))
+    surface.blit(text_surface, text_rect)
+
+
+def draw_text1(text, size, color, surface, x, y, font_path='text/EpilepsySans.ttf'):
+    font = pygame.font.Font(font_path, size)
+    text_surface = font.render(text, True, color)
+    text_rect = text_surface.get_rect(center=(x, y))
+    surface.blit(text_surface, text_rect)
+    return text_rect
+
+
 def game_loop():
     player_pos = [WIDTH // 2, HEIGHT // 2]
     lives = INITIAL_LIVES
     enemies = []
+    bullets = []
     enemy_spawn_time = 2
     clock = pygame.time.Clock()
     running = True
     timer = 40
     last_time = pygame.time.get_ticks()
+    last_shot_time = 0
 
     while running:
         for event in pygame.event.get():
@@ -115,14 +112,35 @@ def game_loop():
                 return "QUIT"
 
         keys = pygame.key.get_pressed()
-        if keys[pygame.K_LEFT] or keys[pygame .K_a]:
+        if keys[pygame.K_a]:  # Влево
             player_pos[0] -= player_speed
-        if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
+        if keys[pygame.K_d]:  # Вправо
             player_pos[0] += player_speed
-        if keys[pygame.K_UP] or keys[pygame.K_w]:
+        if keys[pygame.K_w]:  # Вверх
             player_pos[1] -= player_speed
-        if keys[pygame.K_DOWN] or keys[pygame.K_s]:
+        if keys[pygame.K_s]:  # Вниз
             player_pos[1] += player_speed
+
+        current_time = pygame.time.get_ticks()
+        if keys[pygame.K_UP] and current_time - last_shot_time > 200:  # Стрельба вверх
+            bullet = Bullet(player_pos[0] + PLAYER_SIZE // 2, player_pos[1], (0, -1))
+            bullets.append(bullet)
+            last_shot_time = current_time
+        if keys[pygame.K_DOWN] and current_time - last_shot_time > 200:  # Стрельба вниз
+            bullet = Bullet(player_pos[0] + PLAYER_SIZE // 2, player_pos[1], (0, 1))
+            bullets.append(bullet)
+            last_shot_time = current_time
+        if keys[pygame.K_LEFT] and current_time - last_shot_time > 200:  # Стрельба влево
+            bullet = Bullet(player_pos[0] + PLAYER_SIZE // 2, player_pos[1], (-1, 0))
+            bullets.append(bullet)
+            last_shot_time = current_time
+        if keys[pygame.K_RIGHT] and current_time - last_shot_time > 200:  # Стрельба вправо
+            bullet = Bullet(player_pos[0] + PLAYER_SIZE // 2, player_pos[1], (1, 0))
+            bullets.append(bullet)
+            last_shot_time = current_time
+
+        for bullet in bullets:
+            bullet.move()
 
         player_pos[0] = max(0, min(WIDTH - PLAYER_SIZE, player_pos[0]))
         player_pos[1] = max(0, min(HEIGHT - PLAYER_SIZE, player_pos[1]))
@@ -145,6 +163,20 @@ def game_loop():
                 if lives <= 0:
                     return "LOSE"
 
+        # Обновление пуль
+        for bullet in bullets[:]:
+            bullet.move()
+            if bullet.pos[0] < 0 or bullet.pos[0] > WIDTH or bullet.pos[1] < 0 or bullet.pos[1] > HEIGHT:  # Удаление пуль, которые вышли за пределы экрана
+                bullets.remove(bullet)
+
+        # Проверка коллизий между пулями и врагами
+        for bullet in bullets[:]:
+            for enemy in enemies[:]:
+                if (enemy.pos[0] < bullet.pos[0] < enemy.pos[0] + enemy.size and enemy.pos[1] < bullet.pos[1] < enemy.pos[1] + enemy.size):
+                    bullets.remove(bullet)
+                    enemies.remove(enemy)
+                    break
+
         current_time = pygame.time.get_ticks()
         elapsed_time = (current_time - last_time) / 1000
         timer -= elapsed_time
@@ -160,6 +192,9 @@ def game_loop():
         for enemy in enemies:
             enemy.draw(screen)
 
+        for bullet in bullets:
+            bullet.draw(screen)
+
         draw_text(f'Жизни: {lives}', 36, BLACK, screen, WIDTH // 2, 30)
         draw_text(f'Осталось времени: {int(timer)}', 36, BLACK, screen, WIDTH // 2, 60)
         pygame.display.flip()
@@ -169,15 +204,39 @@ def game_loop():
     return "QUIT"
 
 
+def show_training():
+    running = True
+    index = 0
+    clock = pygame.time.Clock()
+
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_SPACE:  # Проверка нажатия пробела
+                    return  # Выход из функции, чтобы начать игру
+
+        screen.fill(WHITE)
+        screen.blit(training[index], (0, 0))  # Отображаем текущее изображение
+        pygame.display.flip()
+
+        index += 1
+        if index >= len(training):
+            index = 0  # Сбросить индекс для повторного показа
+
+        clock.tick(1)  # Пауза между изображениями (1 секунда)
+
+    pygame.time.delay(1000)  # Небольшая задержка перед началом игры
+    return
+
+
 def menu(result, record_saved):
     running = True
     while running:
         screen.fill(WHITE)
 
         if result == "WIN":
-            # if not record_saved:
-            #     save_record()
-            #     record_saved = True
             draw_text('Поздравляем! Вы выиграли!', 85, GREEN, screen, WIDTH // 2, HEIGHT // 2 - 200)
         else:
             draw_text('Ты проиграл', 85, RED, screen, WIDTH // 2, HEIGHT // 2 - 200)
@@ -194,7 +253,7 @@ def menu(result, record_saved):
                 if event.button == 1:
                     mouse_pos = pygame.mouse.get_pos()
                     if menu_text.collidepoint(mouse_pos):
-                        return True, record_saved  #
+                        return True, record_saved
                     if exit_text.collidepoint(mouse_pos):
                         return False, record_saved
 
@@ -232,6 +291,8 @@ def main():
     while True:
         if not main_menu():
             break
+        show_training()
+
         game_result = game_loop()
         if game_result == "QUIT":
             break
